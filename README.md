@@ -26,7 +26,7 @@ The **Play → Board Profile** flow lets you save multiple boards locally. Profi
 - Approximate width band, qualitative weight feel, concave and deck length.
 - An optional board/truck photo, processed locally into a small profile image.
 
-The optional photo cutout is an edge-connected plain-background removal, not AI object segmentation. It does not recognise a manufacturer/model or infer exact specs. Material selects the existing wood/plastic analyser profile; width, weight feel and concave make small sensitivity adjustments. Grip and shape remain saved reference details and do not yet alter the analyser. These settings are not a calibrated physics simulation.
+The optional photo cutout is an edge-connected plain-background removal, not AI object segmentation. It does not recognise a manufacturer/model or infer exact specs. Material selects the wood/plastic analyser profile; width, weight feel and concave make small sensitivity adjustments. Grip is shown in the live setup and stance UI as a handling reference; it is not yet a calibrated friction input. Shape is saved as profile metadata. These settings are not a calibrated physics simulation. Changing the material in-session updates the active profile, and deleting an active profile selects the next available profile when one exists.
 
 ### Clips and replay
 
@@ -39,7 +39,7 @@ The optional photo cutout is an edge-connected plain-background removal, not AI 
 
 Use **Map Spot** during a session to freeze the current camera view, draw a box around a rail, ledge, gap, ramp, box or manual pad, and estimate its visible 2D width and height relative to the locked board length. The map is saved locally and supplies obstacle-specific practice cues plus quick-select trick recommendations in the session HUD.
 
-This is a manually marked 2D scale estimate, not automatic obstacle detection or a 3D scan. Camera perspective, object orientation and the accuracy of the board lock affect the estimate. Depth is deliberately left unknown; approach speed, curvature, surface material and actual clearance are not reconstructed. Use the result as a rough practice reference and verify the real obstacle by eye.
+This is a manually marked 2D scale estimate, not automatic obstacle detection or a 3D scan. Camera perspective, object orientation and the accuracy of the board lock affect the estimate. An optional depth value can be entered manually; it is never inferred from the single camera view. Saved spots can be selected or deleted locally, and the active spot drives the session HUD and trick recommendations. Approach speed, curvature, surface material and actual clearance are not reconstructed. Use the result as a rough practice reference and verify the real obstacle by eye.
 
 ### Training and challenge tools
 
@@ -79,6 +79,7 @@ The same repository can be hosted as a static site on any service that serves th
 
 ## Source map
 
+- `REQUIREMENTS_AUDIT.md` – line-by-line status for the original product brief, with honest implementation boundaries and remaining blockers
 - `src/App.tsx` – app shell, camera lifecycle, profile selection and session state
 - `src/components/deckcoach/` – home, board-profile flow, HUD, drawers, spot mapper and replay UI
 - `src/lib/board-profiles.ts` – local board profile model and qualitative handling adjustments

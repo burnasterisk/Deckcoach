@@ -242,7 +242,7 @@ export function SessionsDrawer({
               SESSIONS
             </h2>
             <p className="font-mono text-[11px] text-paper/60 whitespace-nowrap">
-              Warmups · Drills · Pro Challenge
+              Warmups · Drills · Weekly Clip Challenge
             </p>
           </div>
 

@@ -27,6 +27,7 @@ interface ControlBarProps {
   onTrickChange: (id: TrickId) => void;
   setup: DeckSetupId;
   onSetupChange: (setup: DeckSetupId) => void;
+  gripLabel?: string;
   calibration: CalibrationState;
   onLockBoard: () => void;
   onCancelLock: () => void;
@@ -55,6 +56,7 @@ export function ControlBar({
   onTrickChange,
   setup,
   onSetupChange,
+  gripLabel,
   calibration,
   onLockBoard,
   onCancelLock,
@@ -132,7 +134,7 @@ export function ControlBar({
         <div className="my-1 h-px bg-paper/10 lg:my-0 lg:h-6 lg:w-px" aria-hidden="true" />
 
         <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto pt-0.5 lg:shrink-0 lg:pt-0">
-          <SetupToggle value={setup} onChange={onSetupChange} />
+          <SetupToggle value={setup} onChange={onSetupChange} gripLabel={gripLabel} />
 
           <span className="h-5 w-px shrink-0 bg-paper/10" aria-hidden="true" />
 

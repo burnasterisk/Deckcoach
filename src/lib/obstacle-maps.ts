@@ -19,6 +19,8 @@ export interface ObstacleMeasurement {
   heightPx: number;
   boardLengthPx: number;
   boardLengthMm: number;
+  /** Optional user-entered depth estimate; never inferred from a single 2D view. */
+  depthMm?: number;
 }
 
 const STORAGE_KEY = "deckcoach.obstacle-maps.v1";
@@ -34,17 +36,19 @@ export function measureObstacle(selection: ObstacleMeasurement): Pick<
   const deckMm = Math.max(60, Math.min(140, requestedDeckMm));
   const widthPx = Number.isFinite(selection.widthPx) ? Math.max(0, selection.widthPx) : 0;
   const heightPx = Number.isFinite(selection.heightPx) ? Math.max(0, selection.heightPx) : 0;
+  const requestedDepthMm = Number.isFinite(selection.depthMm) ? (selection.depthMm ?? 0) : 0;
+  const depthMm = Math.round(Math.max(0, Math.min(1000, requestedDepthMm)));
   const scale = deckMm / boardPx;
   const widthMm = Math.round(widthPx * scale);
   const heightMm = Math.round(heightPx * scale);
   return {
     widthMm,
     heightMm,
-    // A single camera view cannot resolve obstacle depth. Keep it explicitly unknown.
-    depthMm: 0,
+    // Depth is only stored when manually estimated; one camera view cannot resolve it.
+    depthMm,
     widthDecks: Number((widthMm / deckMm).toFixed(2)),
     heightDecks: Number((heightMm / deckMm).toFixed(2)),
-    depthDecks: 0,
+    depthDecks: Number((depthMm / deckMm).toFixed(2)),
     referenceDeckLengthMm: deckMm,
   };
 }

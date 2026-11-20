@@ -5,12 +5,13 @@ import { getTrickCue, type Trick } from "@/lib/tricks";
 interface StanceGuideProps {
   trick: Trick;
   setup: DeckSetupId;
+  gripLabel?: string;
   boardLock?: BoardCalibration | null;
 }
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
-export function StanceGuide({ trick, setup, boardLock = null }: StanceGuideProps) {
+export function StanceGuide({ trick, setup, gripLabel, boardLock = null }: StanceGuideProps) {
   const setupProfile = getDeckSetup(setup);
   const cue = getTrickCue(trick, setup);
   const locked = boardLock !== null;
@@ -49,7 +50,7 @@ export function StanceGuide({ trick, setup, boardLock = null }: StanceGuideProps
         </div>
 
         <p className="mt-1 font-mono text-[10px] text-paper/60 truncate">
-          {setupProfile.gripName}
+          {gripLabel ?? setupProfile.gripName}
           {locked ? ` · ${boardLock.scale.toFixed(2)}×` : ""}
         </p>
 

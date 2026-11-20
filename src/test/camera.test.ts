@@ -68,6 +68,10 @@ describe("trick selector", () => {
       "Smith Grind",
       "Crooked Grind",
     ]);
-    expect(TRICKS).toHaveLength(25);
+    expect(TRICKS.length).toBeGreaterThan(60);
+    expect(new Set(TRICKS.map((trick) => trick.id)).size).toBe(TRICKS.length);
+    expect(TRICKS.every((trick) => Boolean(trick.technique?.setup && trick.technique.execution && trick.technique.timing && trick.technique.catch && trick.technique.commonFaults.length >= 3))).toBe(true);
+    expect(getTricksByCategory("grinds").some((trick) => trick.id === "nosegrind")).toBe(true);
+    expect(getTricksByCategory("flips").find((trick) => trick.id === "pressure-flip")?.technique?.commonFaults.length).toBe(3);
   });
 });

@@ -51,7 +51,7 @@ import {
   type WarmupProgress,
 } from "@/lib/sessions";
 import { DEFAULT_SETUP, getDeckSetup, type DeckSetupId } from "@/lib/setup";
-import { getBoardHandlingTuning, getBoardLengthMm, loadBoardProfiles, saveBoardProfiles, type BoardProfile } from "@/lib/board-profiles";
+import { getBoardGripLabel, getBoardHandlingTuning, getBoardLengthMm, loadBoardProfiles, saveBoardProfiles, type BoardProfile } from "@/lib/board-profiles";
 import { getObstacleAdvice, loadObstacleMaps, saveObstacleMaps, type ObstacleMap } from "@/lib/obstacle-maps";
 import { TrickAnalyzer, type Attempt } from "@/lib/trick-analyzer";
 import { DEFAULT_TRICK, getTrick, TRICKS, type TrickId } from "@/lib/tricks";
@@ -72,6 +72,7 @@ export function App() {
   const [boardProfilesHydrated, setBoardProfilesHydrated] = useState(false);
   const [activeBoardProfileId, setActiveBoardProfileId] = useState<string | null>(null);
   const [obstacleMaps, setObstacleMaps] = useState<ObstacleMap[]>([]);
+  const [activeObstacleMapId, setActiveObstacleMapId] = useState<string | null>(null);
   const [spotMapperOpen, setSpotMapperOpen] = useState(false);
   const [calibration, setCalibration] = useState<CalibrationState>("idle");
   const [lockedPose, setLockedPose] = useState<{
@@ -115,7 +116,7 @@ export function App() {
   const trick = getTrick(trickId);
   const activeBoardProfile = boardProfiles.find((profile) => profile.id === activeBoardProfileId);
   const activeBoardTuning = useMemo(() => getBoardHandlingTuning(activeBoardProfile), [activeBoardProfile]);
-  const activeObstacle = obstacleMaps[0] ?? null;
+  const activeObstacle = obstacleMaps.find((map) => map.id === activeObstacleMapId) ?? obstacleMaps[0] ?? null;
   const spotRecommendations = useMemo(() => {
     if (!activeObstacle) return [];
     const advice = getObstacleAdvice(activeObstacle);
@@ -143,7 +144,15 @@ export function App() {
       setActiveBoardProfileId(activeProfile.id);
       setSetup(activeProfile.material);
     }
-    setObstacleMaps(loadObstacleMaps());
+    const savedMaps = loadObstacleMaps();
+    setObstacleMaps(savedMaps);
+    let savedActiveMapId: string | null = null;
+    try {
+      savedActiveMapId = localStorage.getItem("deckcoach.active-obstacle-map.v1");
+    } catch {
+      // The first in-memory map remains available when storage is disabled.
+    }
+    setActiveObstacleMapId(savedMaps.some((map) => map.id === savedActiveMapId) ? savedActiveMapId : (savedMaps[0]?.id ?? null));
   }, []);
 
   useEffect(() => {
@@ -204,6 +213,14 @@ export function App() {
   useEffect(() => {
     analyzerRef.current.setSetup(setup);
   }, [setup]);
+
+  // A camera stop/restart is a hard session boundary: never carry a half-trick across it.
+  useEffect(() => {
+    analyzerRef.current.reset();
+    samplesRef.current = [];
+    setSampleCount(0);
+    setAttempt(null);
+  }, [cameraLive]);
 
   // Collect hand landmark samples (5, 8, 9, 12) while scanning to lock onto the real board.
   useEffect(() => {
@@ -469,13 +486,43 @@ export function App() {
   }
 
   function handleDeleteBoardProfile(profileId: string) {
-    setBoardProfiles((prev) => prev.filter((profile) => profile.id !== profileId));
+    const remaining = boardProfiles.filter((profile) => profile.id !== profileId);
+    setBoardProfiles(remaining);
     if (activeBoardProfileId === profileId) {
-      setActiveBoardProfileId(null);
+      const fallback = remaining[0] ?? null;
+      setActiveBoardProfileId(fallback?.id ?? null);
+      if (fallback) setSetup(fallback.material);
       try {
-        localStorage.removeItem("deckcoach.active-board-profile.v1");
+        if (fallback) localStorage.setItem("deckcoach.active-board-profile.v1", fallback.id);
+        else localStorage.removeItem("deckcoach.active-board-profile.v1");
       } catch {
-        // The active in-memory selection is still cleared if storage is unavailable.
+        // The in-memory selection remains usable if storage is unavailable.
+      }
+    }
+  }
+
+  function handleSelectObstacleMap(mapId: string) {
+    // The newly-created map can be selected in the same event before React commits its list update.
+    setActiveObstacleMapId(mapId);
+    try {
+      localStorage.setItem("deckcoach.active-obstacle-map.v1", mapId);
+    } catch {
+      // Keep the active selection in memory for this session.
+    }
+  }
+
+  function handleDeleteObstacleMap(mapId: string) {
+    const remaining = obstacleMaps.filter((map) => map.id !== mapId);
+    setObstacleMaps(remaining);
+    saveObstacleMaps(remaining);
+    if (activeObstacleMapId === mapId) {
+      const fallback = remaining[0] ?? null;
+      setActiveObstacleMapId(fallback?.id ?? null);
+      try {
+        if (fallback) localStorage.setItem("deckcoach.active-obstacle-map.v1", fallback.id);
+        else localStorage.removeItem("deckcoach.active-obstacle-map.v1");
+      } catch {
+        // Keep the fallback selection in memory for this session.
       }
     }
   }
@@ -585,7 +632,7 @@ export function App() {
           mirrored={mirrored}
         />
       )}
-      {stanceGuide && <StanceGuide trick={trick} setup={setup} boardLock={boardLock} />}
+      {stanceGuide && <StanceGuide trick={trick} setup={setup} gripLabel={activeBoardProfile ? getBoardGripLabel(activeBoardProfile.grip) : undefined} boardLock={boardLock} />}
       <TopBar
         status={camera.status}
         trick={trick}
@@ -614,12 +661,26 @@ export function App() {
       <ControlBar
         trick={trickId}
         onTrickChange={(id) => {
+          if (id !== trickId) {
+            analyzerRef.current.reset();
+            samplesRef.current = [];
+            clipRecorder.cancelPendingAttempt();
+            setAttempt(null);
+          }
           setTrickId(id);
           bumpInteraction();
         }}
         setup={setup}
+        gripLabel={activeBoardProfile ? getBoardGripLabel(activeBoardProfile.grip) : undefined}
         onSetupChange={(next) => {
+          analyzerRef.current.reset();
+          setAttempt(null);
           setSetup(next);
+          if (activeBoardProfile && activeBoardProfile.material !== next) {
+            setBoardProfiles((prev) => prev.map((profile) => profile.id === activeBoardProfile.id
+              ? { ...profile, material: next, updatedAt: Date.now() }
+              : profile));
+          }
           bumpInteraction();
         }}
         calibration={calibration}
@@ -658,7 +719,7 @@ export function App() {
           wakeHud();
           setSpotMapperOpen(true);
         }}
-        spotLabel={activeObstacle ? `${activeObstacle.name} ${activeObstacle.widthMm}×${activeObstacle.heightMm}mm` : null}
+        spotLabel={activeObstacle ? `${activeObstacle.name} ${activeObstacle.widthMm}×${activeObstacle.heightMm}mm${activeObstacle.depthMm > 0 ? `×${activeObstacle.depthMm}` : ""}` : null}
         spotRecommendations={spotRecommendations}
         hidden={hudHidden}
         onReveal={wakeHud}
@@ -670,12 +731,17 @@ export function App() {
         boardLock={boardLock}
         boardLengthMm={getBoardLengthMm(activeBoardProfile)}
         mirrored={mirrored}
+        maps={obstacleMaps}
+        activeMapId={activeObstacle?.id ?? null}
+        onSelectMap={handleSelectObstacleMap}
+        onDeleteMap={handleDeleteObstacleMap}
         onSave={(map) => {
           setObstacleMaps((previous) => {
             const next = [map, ...previous.filter((item) => item.id !== map.id)].slice(0, 12);
             saveObstacleMaps(next);
             return next;
           });
+          handleSelectObstacleMap(map.id);
         }}
         onClose={() => setSpotMapperOpen(false)}
         onLockBoard={startLockBoard}

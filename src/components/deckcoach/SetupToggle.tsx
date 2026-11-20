@@ -4,11 +4,12 @@ import { cn } from "@/lib/utils";
 interface SetupToggleProps {
   value: DeckSetupId;
   onChange: (setup: DeckSetupId) => void;
+  gripLabel?: string;
 }
 
 const SETUP_ORDER: DeckSetupId[] = ["plastic", "wood"];
 
-export function SetupToggle({ value, onChange }: SetupToggleProps) {
+export function SetupToggle({ value, onChange, gripLabel }: SetupToggleProps) {
   return (
     <div
       role="radiogroup"
@@ -24,7 +25,7 @@ export function SetupToggle({ value, onChange }: SetupToggleProps) {
             type="button"
             role="radio"
             aria-checked={active}
-            title={`${profile.deckName} (${profile.gripName})`}
+            title={`${profile.deckName} (${gripLabel ?? profile.gripName})`}
             onClick={() => onChange(id)}
             className={cn(
               "flex min-h-[38px] items-center gap-1.5 rounded px-2.5 py-1 font-mono text-[11px] whitespace-nowrap shrink-0 transition-colors cursor-pointer press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
@@ -40,7 +41,7 @@ export function SetupToggle({ value, onChange }: SetupToggleProps) {
                 active ? "text-primary-foreground/80" : "text-paper/45",
               )}
             >
-              · {id === "plastic" ? "Sandpaper" : "Foam"}
+              · {gripLabel ?? (id === "plastic" ? "Sandpaper" : "Foam")}
             </span>
           </button>
         );

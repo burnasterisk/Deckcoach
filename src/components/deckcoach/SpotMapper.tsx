@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent, type RefObject } from "react";
-import { Camera, Crosshair, Ruler, ScanLine, X } from "lucide-react";
+import { Camera, Crosshair, Ruler, ScanLine, Trash2, X } from "lucide-react";
 
 import { getObstacleAdvice, measureObstacle, type ObstacleKind, type ObstacleMap } from "@/lib/obstacle-maps";
 import type { BoardCalibration } from "@/lib/board-calibration";
@@ -11,6 +11,10 @@ interface SpotMapperProps {
   boardLock: BoardCalibration | null;
   boardLengthMm: number;
   mirrored: boolean;
+  maps: ObstacleMap[];
+  activeMapId: string | null;
+  onSelectMap: (mapId: string) => void;
+  onDeleteMap: (mapId: string) => void;
   onSave: (map: ObstacleMap) => void;
   onClose: () => void;
   onLockBoard: () => void;
@@ -35,6 +39,10 @@ export function SpotMapper({
   boardLock,
   boardLengthMm,
   mirrored,
+  maps,
+  activeMapId,
+  onSelectMap,
+  onDeleteMap,
   onSave,
   onClose,
   onLockBoard,
@@ -43,6 +51,7 @@ export function SpotMapper({
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [name, setName] = useState("My spot");
   const [kind, setKind] = useState<ObstacleKind>("ledge");
+  const [depthMm, setDepthMm] = useState(0);
   const [start, setStart] = useState<Point | null>(null);
   const [end, setEnd] = useState<Point | null>(null);
   const [selecting, setSelecting] = useState(false);
@@ -108,8 +117,9 @@ export function SpotMapper({
       heightPx: selection.height,
       boardLengthPx: boardLock.deckLengthPx,
       boardLengthMm,
+      depthMm,
     });
-  }, [selection, boardLock, boardLengthMm]);
+  }, [selection, boardLock, boardLengthMm, depthMm]);
 
   const advice = measurement ? getObstacleAdvice({ kind, widthDecks: measurement.widthDecks, heightDecks: measurement.heightDecks }) : null;
 
@@ -262,6 +272,22 @@ export function SpotMapper({
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-paper/5 p-2"><p className="font-mono text-[8px] text-paper/45">WIDTH</p><p className="font-display text-xl">{measurement.widthMm}<span className="ml-1 font-mono text-[9px]">MM</span></p></div>
                 <div className="bg-paper/5 p-2"><p className="font-mono text-[8px] text-paper/45">HEIGHT</p><p className="font-display text-xl">{measurement.heightMm}<span className="ml-1 font-mono text-[9px]">MM</span></p></div>
+                <label className="col-span-2 bg-paper/5 p-2">
+                  <span className="block font-mono text-[8px] text-paper/45">DEPTH ESTIMATE · MANUAL</span>
+                  <span className="mt-1 flex items-center gap-2">
+                    <input
+                      type="range"
+                      min={0}
+                      max={500}
+                      step={5}
+                      value={depthMm}
+                      onChange={(event) => setDepthMm(Number(event.target.value))}
+                      className="min-w-0 flex-1 accent-[#8b5cf6]"
+                      aria-label="Estimated obstacle depth in millimetres"
+                    />
+                    <strong className="w-16 text-right font-mono text-xs tabular-nums text-paper">{depthMm ? `${depthMm} mm` : "unknown"}</strong>
+                  </span>
+                </label>
               </div>
               <div className="min-w-0">
                 <p className="font-mono text-[9px] font-bold text-primary">SPOT READ</p>
@@ -272,8 +298,27 @@ export function SpotMapper({
             </div>
           )}
 
+          {maps.length > 0 && (
+            <div className="mt-3 border-t border-paper/10 pt-3">
+              <p className="mb-2 font-mono text-[9px] font-bold tracking-[.18em] text-paper/45">SAVED SPOTS · {maps.length}</p>
+              <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
+                {maps.map((map) => (
+                  <div key={map.id} className={cn("flex min-h-8 items-center border text-[9px]", map.id === activeMapId ? "border-primary/55 bg-primary/12" : "border-paper/12 bg-black/35")}>
+                    <button type="button" onClick={() => onSelectMap(map.id)} className="px-2 py-1 text-left font-mono text-paper/80 hover:text-paper" aria-pressed={map.id === activeMapId}>
+                      {map.name} · {map.widthMm}×{map.heightMm}mm
+                      {map.depthMm > 0 ? ` · D${map.depthMm}` : " · D?"}
+                    </button>
+                    <button type="button" onClick={() => onDeleteMap(map.id)} aria-label={`Delete saved spot ${map.name}`} className="grid size-7 place-items-center text-paper/35 hover:text-hazard">
+                      <Trash2 className="size-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="font-mono text-[9px] text-paper/40">2D ESTIMATE · LOCAL ONLY · NO PHOTO UPLOAD</p>
+            <p className="font-mono text-[9px] text-paper/40">2D CAMERA SCALE + OPTIONAL MANUAL DEPTH · LOCAL ONLY</p>
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => { setStart(null); setEnd(null); }} className={cn("min-h-10 px-3 font-mono text-[10px] text-paper/60 hover:text-paper", focusRing)}>RESET BOX</button>
               <button type="button" onClick={handleSave} disabled={!measurement || !snapshot} className={cn("flex min-h-10 items-center gap-1.5 bg-primary px-4 font-mono text-[10px] font-bold text-white disabled:opacity-35", focusRing)}>

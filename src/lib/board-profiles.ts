@@ -68,9 +68,13 @@ export function saveBoardProfiles(profiles: BoardProfile[]): void {
   }
 }
 
+export function getBoardGripLabel(gripType: BoardGrip): string {
+  return gripType === "foam" ? "Foam" : gripType === "silicone" ? "Silicone" : "Sandpaper";
+}
+
 export function getBoardProfileLabel(profile: BoardProfile): string {
   const material = profile.material === "wood" ? "Wood" : "Plastic";
-  const grip = profile.grip === "foam" ? "Foam" : profile.grip === "silicone" ? "Silicone" : "Sandpaper";
+  const grip = getBoardGripLabel(profile.grip);
   const weight = profile.weightFeel ? ` · ${profile.weightFeel}` : "";
   return `${material} · ${grip}${weight}`;
 }

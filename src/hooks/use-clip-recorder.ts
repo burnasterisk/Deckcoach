@@ -519,6 +519,15 @@ export function useClipRecorder(
     return () => clearInterval(id);
   }, [cameraLive, finalizeActiveCapture]);
 
+  const cancelPendingAttempt = useCallback(() => {
+    // Switching tricks or leaving a session invalidates an unfinished capture.
+    activeRef.current = null;
+    preRollRef.current = [];
+    preRollWriteIdxRef.current = 0;
+    lastPreRollAtRef.current = 0;
+    setRecordingAir(false);
+  }, []);
+
   const deleteClip = useCallback((clipId: string) => {
     if (pendingPersistIdsRef.current.has(clipId)) deletedDuringPersistRef.current.add(clipId);
     void deleteClipRecord(clipId);
@@ -557,6 +566,7 @@ export function useClipRecorder(
     clips,
     recordingAir,
     syncSample,
+    cancelPendingAttempt,
     getFrameSource,
     deleteClip,
     exportClipFramePng,
