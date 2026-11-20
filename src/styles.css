@@ -1,0 +1,419 @@
+/*
+ * Tailwind v4 entry: config lives here, with no tailwind.config.js or PostCSS plugin.
+ * Keep every @import in this top block. Web fonts load via <link> in index.html.
+ */
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * DeckCoach V3 design system — Y2K Cyber-Gothic Graffiti.
+ * Obsidian asphalt (#08080A), crimson (#DC2626), UV twilight purple (#8B5CF6),
+ * liquid chrome silver (#E4E4E7) and hazard-tape yellow (#FACC15) accents.
+ */
+
+@theme inline {
+  --font-display: "Rubik Wet Paint", "Rubik Dirt", "Permanent Marker", system-ui, sans-serif;
+  --font-marker: "Permanent Marker", "Rubik Dirt", system-ui, sans-serif;
+  --font-sans: "Space Mono", ui-monospace, monospace;
+  --font-mono: "Space Mono", ui-monospace, monospace;
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 6px);
+  --radius-3xl: calc(var(--radius) + 8px);
+  --radius-4xl: calc(var(--radius) + 10px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-uv: var(--uv);
+  --color-chrome: var(--chrome);
+  --color-hazard: var(--hazard);
+  --color-hazard-foreground: var(--hazard-foreground);
+  --color-paper: var(--paper);
+  --color-paper-foreground: var(--paper-foreground);
+  --color-concrete: var(--concrete);
+  --color-tape: var(--tape);
+  --color-tape-foreground: var(--tape-foreground);
+  --color-asphalt: var(--asphalt);
+  --color-ink: var(--ink);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --animate-scan: scan 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  --animate-scan-tape: scan-tape 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  --animate-pulse-dot: pulse-dot 1s steps(2, jump-none) infinite;
+  --animate-slap: slap 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-dash: dash 1.4s linear infinite;
+}
+
+:root {
+  --radius: 0.375rem;
+
+  /* Raw palette */
+  --asphalt: #08080a; /* obsidian asphalt */
+  --uv: #8b5cf6; /* UV twilight purple */
+  --chrome: #e4e4e7; /* liquid chrome silver */
+  --ink: oklch(0 0 0);
+  --concrete: oklch(0.32 0.005 91.5);
+  --tape: oklch(0.74 0.01 92);
+  --tape-foreground: oklch(0.145 0 0);
+  --paper: #e4e4e7; /* chrome silver text */
+  --paper-foreground: oklch(0.145 0 0);
+  --hazard: #facc15; /* hazard-tape yellow */
+  --hazard-foreground: oklch(0.145 0 0);
+
+  --background: var(--asphalt);
+  --foreground: var(--paper);
+  --card: #121016;
+  --card-foreground: var(--paper);
+  --popover: #121016;
+  --popover-foreground: var(--paper);
+  --primary: #dc2626; /* crimson */
+  --primary-foreground: #fafafa;
+  --secondary: #1c1824;
+  --secondary-foreground: var(--paper);
+  --muted: #15121b;
+  --muted-foreground: #a1a1aa;
+  --accent: var(--concrete);
+  --accent-foreground: var(--paper);
+  --destructive: var(--hazard);
+  --destructive-foreground: var(--asphalt);
+  --border: rgb(228 228 231 / 14%);
+  --input: rgb(228 228 231 / 20%);
+  --ring: var(--uv);
+
+  --shadow-hard: 4px 4px 0 0 var(--ink);
+  --shadow-hard-sm: 2px 2px 0 0 var(--ink);
+  --noise-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .35 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --noise-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 -3 1.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  --chart-1: var(--primary);
+  --chart-2: var(--uv);
+  --chart-3: var(--tape);
+  --chart-4: var(--paper);
+  --chart-5: var(--concrete);
+  --sidebar: var(--asphalt);
+  --sidebar-foreground: var(--paper);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-accent: var(--concrete);
+  --sidebar-accent-foreground: var(--paper);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--primary);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    overscroll-behavior: none;
+  }
+}
+
+/* Full-height app shell: 100vh fallback, then dynamic viewport so mobile toolbars never hide controls. */
+@utility app-viewport {
+  height: 100vh;
+  height: 100dvh;
+}
+
+@utility hud-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+@utility pt-safe {
+  padding-top: max(0.625rem, env(safe-area-inset-top));
+}
+
+@utility pb-safe {
+  padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
+}
+
+@utility px-safe {
+  padding-left: max(0.75rem, env(safe-area-inset-left));
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ---------- Futuristic-Graffiti HUD Surfaces ---------- */
+
+@utility hud-glass {
+  background-color: rgb(8 8 10 / 78%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgb(139 92 246 / 28%);
+  box-shadow: 0 10px 30px oklch(0 0 0 / 45%);
+}
+
+@utility hud-tag-glow {
+  text-shadow: 0 0 18px rgb(220 38 38 / 55%);
+}
+
+@utility grain {
+  background-image: var(--noise-dark);
+  background-size: 180px 180px;
+}
+
+@utility drop-hard-sm {
+  filter: drop-shadow(0 2px 6px oklch(0 0 0 / 70%));
+}
+
+@utility press {
+  transition:
+    transform 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 150ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 150ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+/* Sleek yellow-black hazard warning tape (calibration line). */
+@utility hazard-tape {
+  background-color: var(--hazard);
+  background-image:
+    repeating-linear-gradient(-45deg, oklch(0 0 0 / 85%) 0 8px, transparent 8px 17px),
+    var(--noise-dark);
+  background-size:
+    auto,
+    180px 180px;
+}
+
+/* Subtle acid-yellow glow behind the ghost deck guide. */
+@utility ghost-glow {
+  filter: drop-shadow(0 0 8px rgb(139 92 246 / 55%));
+}
+
+/* Minimalist floor grid shown once the surface is calibrated. */
+@utility surface-grid {
+  background-image:
+    linear-gradient(to right, rgb(139 92 246 / 30%) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(139 92 246 / 30%) 1px, transparent 1px);
+  background-size: 56px 56px;
+  transform: perspective(520px) rotateX(62deg);
+  transform-origin: center bottom;
+  mask-image: linear-gradient(to top, black 12%, transparent 88%);
+}
+
+@keyframes scan {
+  0% {
+    top: 10%;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    top: 90%;
+    opacity: 0;
+  }
+}
+
+@keyframes scan-tape {
+  0% {
+    top: calc(10% - 0.75rem);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    top: calc(90% - 0.75rem);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes slap {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+
+/* ---------- Y2K Cyber-Gothic: home screen & no-cam brick spot ---------- */
+
+/* Weathered dark brick wall: staggered bricks from gradients, no image assets. */
+@utility brick-wall {
+  background-color: #14100f;
+  background-image:
+    linear-gradient(to bottom, rgb(8 8 10 / 0%) 55%, rgb(8 8 10 / 85%) 100%),
+    repeating-linear-gradient(to bottom, transparent 0 27px, rgb(0 0 0 / 70%) 27px 30px),
+    repeating-linear-gradient(to right, transparent 0 69px, rgb(0 0 0 / 60%) 69px 72px),
+    linear-gradient(115deg, #231815 0%, #181212 45%, #1f1618 100%);
+  background-size:
+    auto,
+    100% 30px,
+    72px 60px,
+    auto;
+}
+
+/* Alternate-row brick offset overlay */
+@utility brick-offset {
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0 33px,
+    rgb(0 0 0 / 55%) 33px 36px
+  );
+  background-size: 72px 60px;
+  mask-image: repeating-linear-gradient(to bottom, transparent 0 30px, black 30px 60px);
+  -webkit-mask-image: repeating-linear-gradient(to bottom, transparent 0 30px, black 30px 60px);
+}
+
+/* UV / crimson light pools washing the wall */
+@utility spot-light {
+  background-image:
+    radial-gradient(60% 45% at 18% 12%, rgb(139 92 246 / 34%), transparent 70%),
+    radial-gradient(55% 40% at 88% 30%, rgb(220 38 38 / 26%), transparent 70%),
+    radial-gradient(70% 30% at 50% 100%, rgb(139 92 246 / 18%), transparent 70%);
+}
+
+/* Liquid chrome lettering for graffiti tags */
+@utility chrome-text {
+  background-image: linear-gradient(
+    180deg,
+    #fafafa 0%,
+    #e4e4e7 28%,
+    #71717a 48%,
+    #d4d4d8 56%,
+    #ffffff 72%,
+    #8b5cf6 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 1px rgb(8 8 10 / 90%);
+  filter: drop-shadow(0 0 14px rgb(139 92 246 / 55%)) drop-shadow(0 3px 0 rgb(220 38 38 / 70%));
+}
+
+/* Animated film grain, kept quiet */
+@utility film-grain {
+  background-image: var(--noise-dark);
+  background-size: 180px 180px;
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+  animation: grain 0.9s steps(4) infinite;
+}
+
+/* Windows-98 bevel for the dock bar */
+@utility bevel-98 {
+  border: 2px solid;
+  border-color: #e4e4e7 #3f3f46 #3f3f46 #e4e4e7;
+  background-color: #a1a1aa;
+}
+
+@keyframes grain {
+  0% {
+    background-position: 0 0;
+  }
+  25% {
+    background-position: -40px 22px;
+  }
+  50% {
+    background-position: 30px -35px;
+  }
+  75% {
+    background-position: -18px -12px;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+@keyframes drip {
+  0%,
+  100% {
+    transform: scaleY(0.82);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
