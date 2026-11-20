@@ -45,8 +45,15 @@ export function useBoardTracking(
   const lastSpinAtRef = useRef(0);
 
   useEffect(() => {
+    // Camera currentTime restarts at zero when a session is reopened.
+    // Reset all temporal filters so the new stream is tracked immediately.
+    lastTsRef.current = -1;
+    lastSampleAtRef.current = 0;
+    flipAccumRef.current = 0;
+    lastSpinAtRef.current = 0;
+    prevGrayRef.current = null;
+
     if (!live) {
-      prevGrayRef.current = null;
       setTelemetry(null);
       setLiveFlipDeg(0);
       return;

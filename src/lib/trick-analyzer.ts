@@ -1,6 +1,6 @@
 import type { BoardTrackTelemetry } from "./board-tracker";
 import { shortestAngleDeltaDeg, type HandKinematics } from "./hand-kinematics";
-import { getDeckSetup, type DeckSetupId, type TrackingSensitivity } from "./setup";
+import { getDeckSetup, type BoardHandlingTuning, type DeckSetupId, type TrackingSensitivity } from "./setup";
 import { getTrick, type Trick, type TrickId } from "./tricks";
 
 export interface TipPoint {
@@ -769,6 +769,7 @@ export function scoreAttempt(
   primoScore = 0,
   trickId: TrickId = "ollie",
   hasBoardTelemetry = false,
+  tuning?: BoardHandlingTuning,
 ): {
   score: number;
   diagnosis: Diagnosis;
@@ -778,10 +779,13 @@ export function scoreAttempt(
   const trick = getTrick(trickId);
   const sens = setup ? getDeckSetup(setup).sensitivity : DEFAULT_SENSITIVITY;
   const scale = clamp(boardScale, 0.55, 1.75);
-  const popScore = clamp(m.peakPop / (sens.peakScale * scale), 0, 1);
-  const levelScore = clamp(1 - m.levelness / (0.1 * scale), 0, 1);
+  const popMultiplier = tuning?.popThresholdMultiplier ?? 1;
+  const landingMultiplier = tuning?.landingBandMultiplier ?? 1;
+  const spreadMultiplier = tuning?.idealSpreadMultiplier ?? 1;
+  const popScore = clamp(m.peakPop / (sens.peakScale * scale * popMultiplier), 0, 1);
+  const levelScore = clamp(1 - m.levelness / (0.1 * scale * landingMultiplier), 0, 1);
   const spreadScore = clamp(
-    1 - Math.abs(m.spread - sens.idealSpread * scale) / (0.09 * scale),
+    1 - Math.abs(m.spread - sens.idealSpread * scale * spreadMultiplier) / (0.09 * scale * spreadMultiplier),
     0,
     1,
   );
@@ -805,7 +809,7 @@ export function scoreAttempt(
 
   const copy = DIAGNOSIS_BY_SETUP[setup ?? "default"];
 
-  if (m.peakPop < (sens.popTrigger + 0.015) * scale) {
+  if (m.peakPop < (sens.popTrigger + 0.015) * scale * popMultiplier) {
     return {
       score,
       diagnosis: copy.DEAD_POP,
@@ -993,6 +997,7 @@ export class TrickAnalyzer {
     boardScale = 1,
     boardTelemetry?: BoardTrackTelemetry | null,
     kinematics?: HandKinematics | null,
+    tuning?: BoardHandlingTuning,
   ): Attempt | null {
     const activeSetup = setupOverride ?? this.setup;
     const sens = activeSetup ? getDeckSetup(activeSetup).sensitivity : DEFAULT_SENSITIVITY;
@@ -1035,7 +1040,7 @@ export class TrickAnalyzer {
       if (this.restBuffer.length > 10) this.restBuffer.shift();
 
       const armed = now - this.lastAttemptAt > COOLDOWN_MS;
-      const popTrigger = sens.popTrigger * scale;
+      const popTrigger = sens.popTrigger * scale * (tuning?.popThresholdMultiplier ?? 1);
       const bothUp =
         tips.index.y < this.restY - popTrigger && tips.middle.y < this.restY - popTrigger;
       const nearSurface = Math.abs(this.restY - surfaceY) < sens.surfaceTolerance * scale;
@@ -1168,7 +1173,7 @@ export class TrickAnalyzer {
       return null;
     }
 
-    if (tips.middle.y < this.restYAtPop - sens.landBand * scale) return null;
+    if (tips.middle.y < this.restYAtPop - sens.landBand * scale * (tuning?.landingBandMultiplier ?? 1)) return null;
 
     // Caught: tips are back at rest level.
     this.phase = "rest";
@@ -1212,6 +1217,7 @@ export class TrickAnalyzer {
       landingPrimo,
       trick.id,
       hasBoard,
+      tuning,
     );
     metrics.landingKind = landingKind;
 

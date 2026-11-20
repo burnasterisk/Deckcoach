@@ -103,6 +103,15 @@ export function useCamera(enabled = true) {
         await video.play().catch(() => undefined);
       }
 
+      // A flip/retry/home transition may have started while play() was pending.
+      // A stale request must never overwrite the newer request's status or stream.
+      if (id !== requestId.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        if (video?.srcObject === stream) video.srcObject = null;
+        if (streamRef.current === stream) streamRef.current = null;
+        return;
+      }
+
       const track = stream.getVideoTracks()[0];
       const settings = track?.getSettings() ?? {};
       const facingMode = settings.facingMode;

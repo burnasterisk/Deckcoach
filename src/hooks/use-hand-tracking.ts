@@ -34,6 +34,9 @@ export function useHandTracking(
       return;
     }
     let cancelled = false;
+    // A new MediaStream starts its video clock near zero; never compare it with
+    // the previous session's last frame timestamp.
+    lastTsRef.current = -1;
 
     setStatus("loading");
     createHandLandmarker()
@@ -52,6 +55,7 @@ export function useHandTracking(
     return () => {
       cancelled = true;
       cancelAnimationFrame(rafRef.current);
+      lastTsRef.current = -1;
       landmarkerRef.current?.close();
       landmarkerRef.current = null;
     };

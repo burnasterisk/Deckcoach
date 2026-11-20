@@ -1,3 +1,4 @@
+import { ADDITIONAL_TRICKS } from "./additional-tricks";
 import type { DeckSetupId } from "./setup";
 
 export type TrickCategory = "basics" | "flips" | "spins" | "grinds";
@@ -44,7 +45,48 @@ export type TrickId =
   | "5-0-grind"
   | "boardslide"
   | "smith-grind"
-  | "crooked-grind";
+  | "crooked-grind"
+  // Expanded pop-based fingerboard catalogue
+  | "nollie-kickflip"
+  | "fakie-kickflip"
+  | "switch-kickflip"
+  | "nollie-heelflip"
+  | "fakie-heelflip"
+  | "switch-heelflip"
+  | "nollie-pop-shuvit"
+  | "fakie-pop-shuvit"
+  | "switch-pop-shuvit"
+  | "double-heelflip"
+  | "triple-kickflip"
+  | "late-kickflip"
+  | "late-heelflip"
+  | "pressure-flip"
+  | "pressure-heelflip"
+  | "dolphin-flip"
+  | "hospital-flip"
+  | "underflip"
+  | "fingerflip"
+  | "casper-flip"
+  | "kickflip-body-varial"
+  | "double-varial-kickflip"
+  | "fs-bigspin"
+  | "bs-bigspin"
+  | "360-bigspin"
+  | "540-shuvit"
+  | "720-shuvit"
+  | "fakie-tre-flip"
+  | "nollie-tre-flip"
+  | "nosegrind"
+  | "tailslide"
+  | "noseslide"
+  | "lipslide"
+  | "feeble-grind"
+  | "blunt-slide"
+  | "noseblunt"
+  | "overcrook"
+  | "willy-grind"
+  | "kickflip-50-50"
+  | "kickflip-boardslide";
 
 export interface FingerMark {
   finger: "I" | "M";
@@ -134,6 +176,14 @@ export interface Trick {
   signature: TrickMotionSignature;
   cue: string;
   cues: Record<DeckSetupId, string>;
+  /** Structured mechanics notes shown in the trick picker when available. */
+  technique?: {
+    setup: string;
+    execution: string;
+    timing: string;
+    catch: string;
+    commonFaults: readonly string[];
+  };
 }
 
 const TAIL_POP_VECTOR: FingerVectorGuide = {
@@ -202,7 +252,7 @@ const FS_SCOOP_VECTOR: FingerVectorGuide = {
   ],
 };
 
-export const TRICKS: Trick[] = [
+const BASE_TRICKS: Trick[] = [
   // ==================== BASICS ====================
   {
     id: "ollie",
@@ -1475,6 +1525,193 @@ export const TRICKS: Trick[] = [
     },
   },
 ];
+
+type TechniqueNotes = NonNullable<Trick["technique"]>;
+
+/** Hand-authored notes for the original core set; the expanded recipes carry their own notes. */
+const BASE_TECHNIQUE_NOTES: Partial<Record<TrickId, TechniqueNotes>> = {
+  ollie: {
+    setup: "Place the middle pad in the tail pocket and the index just behind the front bolts. Keep both fingers softly arched and the wrist aligned with the board's travel line.",
+    execution: "Drive the tail into the surface with the middle finger, then let the index travel up the grip toward the nose to level the deck. Do not lift both fingers straight up together.",
+    timing: "The tail snap starts the movement. Begin the index slide as the nose rises; sliding before the tail contacts the surface bleeds off the pop.",
+    catch: "Meet the deck over the bolts with both pads, then let the fingers flex to absorb the landing. Keep the deck level through touchdown.",
+    commonFaults: ["Index slides before the tail snap", "Front finger stops short and leaves a rocket angle", "Catch lands on the kicks instead of the bolts"],
+  },
+  "boned-ollie": {
+    setup: "Use a normal tail-pop stance, but keep the index close enough to the nose pocket to extend through it. Start with the middle finger loaded and the index relaxed.",
+    execution: "Pop steeply, then drive the index past the front bolts while lifting/tucking the middle finger. The nose dips as the tail rises into the boned-out shape.",
+    timing: "Separate the tail snap from the extension by a fraction of the rise. Extending before takeoff produces a dragged, low ollie; extending after the apex loses the tweak.",
+    catch: "Bring the middle pad back over the rear bolts and level the nose before both pads settle. Absorb the landing rather than pinning the deck flat.",
+    commonFaults: ["Front finger pushes before the tail has snapped", "Index stops at the front bolts so the deck stays rocket-shaped", "Middle finger never lifts clear enough to show the tweak"],
+  },
+  nollie: {
+    setup: "Move the index pad to the nose pocket and keep the middle pad near the rear half of the deck. Let the index carry the initial load without flattening the wrist.",
+    execution: "Snap the nose down with the index, then guide the rising deck back toward level with the middle finger moving toward the tail. Keep the hand following the board rather than reaching after it.",
+    timing: "The nose snap must happen first. Start the middle-finger guide as the tail lifts; an early pull cancels the nose rebound.",
+    catch: "Catch over both truck areas once the deck levels, with the index returning toward the nose bolts and the middle over the rear bolts.",
+    commonFaults: ["Middle finger supplies a tail-pop instead of an index nose-pop", "Nose is loaded too far inside to create a clean snap", "Middle finger drags early and pulls the board off line"],
+  },
+  "fakie-ollie": {
+    setup: "Use your comfortable tail-pop finger placement, but set the board travelling backward. Keep the wrist steady so the reverse travel direction does not rotate the hand off-axis.",
+    execution: "Snap the tail while maintaining backward travel, then guide the nose level with the index. Think of the same ollie mechanics moving in the opposite direction.",
+    timing: "Pop as the board moves backward, then level during the first part of the rise. Do not add an unnecessary scoop to compensate for the reversed travel.",
+    catch: "Catch square over the bolts and keep the backward travel line through touchdown; avoid reaching forward and stopping the board in mid-air.",
+    commonFaults: ["Hand turns back to its regular travel direction", "Extra scoop creates an unintended shuvit", "Index chases the nose and catches behind the deck"],
+  },
+  "switch-ollie": {
+    setup: "Set your fingers in the switch stance you use consistently, mirrored from your normal comfortable placement. Keep the pop finger in the intended tail pocket and wrist square to the deck.",
+    execution: "Make a clean tail snap with the switch lead finger, then guide the nose level with the other pad. Prioritise a straight vertical path before adding height.",
+    timing: "Keep the pop-to-slide cadence identical to a regular ollie, but execute it with the switch finger roles. Rushing the front-finger slide makes the board drift.",
+    catch: "Return both pads to their switch bolt positions and catch level. Follow the deck's centre rather than moving the hand back to your regular stance.",
+    commonFaults: ["Default stance finger placement leaks into the switch attempt", "Front pad slides before the tail has snapped", "Hand follows its normal path and misses the switch catch"],
+  },
+  kickflip: {
+    setup: "Set the middle finger in the tail pocket and the index near the front bolts, slightly toward the heel-side edge. Keep the index pad light enough to flick rather than pin the deck.",
+    execution: "Pop first, then brush the index diagonally off the heel-side nose corner to create one long-axis rotation. Keep the middle finger from clamping the deck during the flick.",
+    timing: "Let the tail snap initiate the rise, then flick as the nose comes up. A short, clean brush is more repeatable than a hard upward jab.",
+    catch: "Watch the grip return, then catch over the bolts after the full 360°. Meet the deck with relaxed pads and absorb the landing evenly.",
+    commonFaults: ["Flick travels upward instead of out through the edge", "Index drags before the tail has popped", "Fingers drop before the grip completes its return"],
+  },
+  heelflip: {
+    setup: "Use the tail-pop stance with the index positioned toward the toe-side edge near the front bolts. Keep the middle finger centred in the tail pocket.",
+    execution: "Pop, then brush the index outward through the toe-side edge to rotate the deck the opposite way from a kickflip. Keep the wrist from rolling with the flick.",
+    timing: "Start the toe-side brush as the nose rises after the tail snap. Too much early sideways pressure makes the deck drift before it flips.",
+    catch: "Let the deck complete its 360° return to grip side up, then meet both bolt zones. Keep the index from reaching down while the board is still edge-on.",
+    commonFaults: ["Flick comes from the kickflip/heel side", "Board travels sideways from an oversized outward push", "Catch begins before the grip side faces up"],
+  },
+  "varial-kickflip": {
+    setup: "Keep the kickflip index position and place the middle pad deep enough in the tail pocket to scoop. Leave a clear path between the two actions so the flick is not blocked.",
+    execution: "Combine a backside 180° tail scoop with a single kickflip flick. The scoop turns the board while the index supplies the long-axis flip; neither action should dominate the other.",
+    timing: "Initiate the scoop with the tail pop and add the index flick through the rising phase. If the scoop finishes too early, the board spins away before the kickflip completes.",
+    catch: "Track the nose through the 180° shuv and catch grip-side up after the full flip. Centre both pads over the bolts before touchdown.",
+    commonFaults: ["Scoop is too strong and the board over-rotates", "Kickflip flick is muted by a tight tail scoop", "Catch is made after the shuv but before the flip finishes"],
+  },
+  "varial-heelflip": {
+    setup: "Place the index at the toe-side flick pocket and the middle finger deep in the tail. Keep the wrist neutral so the frontside scoop does not become an unintended wrist spin.",
+    execution: "Pair a frontside 180° scoop with a heelflip flick. Let the middle finger move the board around its vertical axis while the index brushes the toe-side edge.",
+    timing: "Start the frontside scoop with the pop and flick through the first part of the rise. Keep both impulses continuous rather than adding a second corrective jab.",
+    catch: "Wait for the heelflip to finish with grip side up, then catch over the bolts while the deck completes its frontside half-turn.",
+    commonFaults: ["Backside scoop direction is used by habit", "Index flick is too weak to complete the heelflip", "Wrist twists independently and pulls the board off-axis"],
+  },
+  hardflip: {
+    setup: "Load the middle finger in the tail pocket and place the index near the kickflip flick point. Keep the index more centred than for a flat kickflip so it can flick through the rising deck.",
+    execution: "Drive a frontside 180° scoop while the index adds a steep kickflip. The scoop should pass between the fingers; avoid pinching the deck edge with the index.",
+    timing: "The pop and frontside scoop begin together; the kickflip flick follows immediately as the nose rises. A flick that starts before the pop tends to produce a low sideways kickflip.",
+    catch: "Follow the nose through the frontside half-turn and catch only when the kickflip rotation is complete. Bring both pads down together over the bolt zones.",
+    commonFaults: ["Scoop direction is reversed", "Kickflip flick is too flat and becomes a varial-like rotation", "Index blocks the deck as it passes between the fingers"],
+  },
+  "inward-heelflip": {
+    setup: "Set the index on the toe-side heelflip pocket and the middle pad deep in the tail for a backside scoop. Keep the index free to brush outward.",
+    execution: "Combine a backside 180° scoop with a heelflip flick. Let the tail rotate under the hand while the index creates the opposite long-axis flip.",
+    timing: "The backside scoop begins with the tail snap; apply the heelflip brush as the board rises. Keep the two inputs linked, not separated by a pause.",
+    catch: "Wait for the toe-side flip to finish and the nose to complete its backside half-turn. Catch both bolt areas with the deck level.",
+    commonFaults: ["Frontside scoop is used instead of backside", "Heelflip flick turns into a kickflip", "Catch is early while the board is still edge-on"],
+  },
+  "double-kickflip": {
+    setup: "Use your regular kickflip placement, but keep a little extra clearance above the deck and a lighter, quicker index contact. Avoid loading extra pressure into the middle finger.",
+    execution: "Snap the tail, then flick cleanly through the heel edge with enough follow-through for two full rotations. Do not keep dragging the index across the deck after release.",
+    timing: "The extra rotation needs a clean early flick and a patient catch. Let the board rise and finish the second rotation; dipping the fingers at the first grip-side flash cuts it short.",
+    catch: "Spot the grip returning after 720° and catch over the bolts. Keep the pads hovering rather than chasing the deck during the second rotation.",
+    commonFaults: ["Flick is too soft for the second rotation", "Finger stays in contact and stalls the spin", "Catch is made on the first grip-side pass"],
+  },
+  "pop-shuvit": {
+    setup: "Set the middle finger in the tail pocket with room to sweep backward and slightly across the deck. Keep the index hovering near the front bolts to stop an accidental flip.",
+    execution: "Pop while scooping the tail backside through a half-turn. Keep the index high and quiet; the middle finger supplies the shuvit rather than a long-axis flick.",
+    timing: "The scoop starts with the pop and continues in one short arc. Pulling too early drags the tail along the table; adding a late wrist twist sends the nose off line.",
+    catch: "Track the nose through 180° and catch once the grip side is still facing up. Place the index and middle pads back over the bolt areas.",
+    commonFaults: ["Index adds an accidental kickflip", "Tail drags instead of snapping clear", "Board rotates past 180° before the catch"],
+  },
+  "fs-shuvit": {
+    setup: "Place the middle pad in the tail pocket and angle the scoop path toward the frontside direction. Keep the index lightly above the front bolts to keep the deck flat.",
+    execution: "Pop and push the tail frontside through a 180° horizontal turn. Keep the wrist square and let the tail sweep underneath the palm.",
+    timing: "Begin the frontside sweep at tail impact and release as the board clears the surface. A late shove after the pop usually creates sideways drift without enough rotation.",
+    catch: "Follow the deck through the half-turn, then catch the grip side up with both pads near the bolts and the nose aligned to the new travel direction.",
+    commonFaults: ["Backside scoop direction is used", "Index presses down and blocks the spin", "The hand stops while the deck continues rotating"],
+  },
+  "360-shuvit": {
+    setup: "Load the tail with the middle finger and hold the index slightly higher than for a standard shuvit. The index should guide the deck without flicking its edge.",
+    execution: "Use a longer, stronger backside tail scoop to create a complete 360° horizontal rotation while keeping the long axis level.",
+    timing: "Sweep through the full rotation from takeoff rather than pulsing the tail twice. Keep the index clear until the nose returns to its starting direction.",
+    catch: "Wait for the full 360° and catch grip-side up over the bolts. A clean catch happens after the nose has completed its full circle, not at the halfway point.",
+    commonFaults: ["Scoop only reaches 180°", "Index adds unintended flip rotation", "Second corrective push over-rotates the board"],
+  },
+  "tre-flip": {
+    setup: "Set a deep backside scoop with the middle finger and a light kickflip flick position for the index. Keep the front pad loose so the deck can travel through the wrap.",
+    execution: "Combine one backside 360° tail scoop with a single kickflip flick. The middle finger drives the full shuv rotation while the index gives the deck its long-axis flip.",
+    timing: "Start the scoop on the pop and add the flick as the board rises. Keep the flick compact; a hard kickflip jab can fight the 360° scoop path.",
+    catch: "Track the nose through the full 360° and wait for the grip to return after the kickflip. Catch both bolt areas only once the deck is level.",
+    commonFaults: ["Scoop stalls before the full 360°", "Index flick is too strong and throws the deck out of the wrap", "Fingers drop on the first grip-side glimpse"],
+  },
+  "laser-flip": {
+    setup: "Set the middle finger for a deep frontside tail scoop and the index at the toe-side heelflip flick pocket. Keep wrist movement smooth and controlled.",
+    execution: "Drive a frontside 360° scoop while the index supplies a heelflip. Let the tail travel around the hand; do not force the full rotation with a late forearm twist.",
+    timing: "Begin the frontside scoop with the pop and apply the heelflip brush on the rise. Keep the flick and scoop moving as one continuous action.",
+    catch: "Wait for both the full frontside 360° and the heelflip to finish. Catch grip-side up over the bolts with the wrist returning to neutral.",
+    commonFaults: ["Backside scoop is used from muscle memory", "Heelflip flick turns into a kickflip", "Wrist over-rotates and pulls the catch off-centre"],
+  },
+  bigspin: {
+    setup: "Set the middle finger deep in the backside scoop pocket and keep the index hovering above the front bolts. Plan the wrist/hand follow-through before popping.",
+    execution: "Scoop the board through a backside 360° while the hand/wrist follows through a 180° body-style turn. The deck and hand do not rotate by the same amount.",
+    timing: "Start the 360° board scoop on takeoff and let the wrist turn through the middle of the arc. Turning the wrist before the board has cleared the surface can mute the pop.",
+    catch: "Spot the deck after the full board rotation and receive it in the changed stance. Re-centre the pads over the bolts instead of untwisting at the last instant.",
+    commonFaults: ["Board only rotates 180°", "Wrist turns 360° with the deck instead of following 180°", "Catch is made in the original stance and knocks the board away"],
+  },
+  "gazelle-flip": {
+    setup: "Use a deep backside scoop and a controlled kickflip index position. Keep enough room around the board for the large rotation and avoid a cramped wrist start.",
+    execution: "Combine a 540° backside scoop with a kickflip while the wrist/hand follows through the large rotation. Keep the finger pads clear until the deck comes back under the hand.",
+    timing: "Initiate the scoop with the pop; the kickflip brush should happen early enough to finish before the catch. Let the board travel rather than chasing it with repeated corrections.",
+    catch: "Track the nose through the extended spin and catch only after the flip and horizontal rotation have resolved. Keep the wrist relaxed as the pads reconnect.",
+    commonFaults: ["Scoop ends at 360° instead of 540°", "Kickflip finishes after the catch begins", "Wrist chases the deck and pulls the hand off its landing line"],
+  },
+  impossible: {
+    setup: "Set the middle finger in the tail pocket with a curled, wrapping path available; lift the index clear of the deck. Keep the middle pad hooked rather than flat.",
+    execution: "Pop and curl the middle finger so the deck wraps vertically around it. The board should travel around the finger, not perform a flat kickflip under two fingers.",
+    timing: "The wrap begins as the tail snaps upward. Maintain the curl through the rotation, then open the finger as the deck completes the loop.",
+    catch: "Bring the index back over the nose and meet the returning deck with the middle finger near the tail. Absorb the catch without clamping during the final part of the wrap.",
+    commonFaults: ["Index stays on the deck and blocks the wrap", "Middle finger pushes flat instead of curling around the tail", "Finger opens before the board completes the loop"],
+  },
+  "50-50-grind": {
+    setup: "Approach parallel to the rail/ledge with both finger pads balanced over the truck areas. Aim the centre line of the deck directly above the obstacle.",
+    execution: "Ollie to obstacle height and land both trucks on the rail. Keep the deck parallel and distribute pressure between index and middle while travelling along the obstacle.",
+    timing: "Finish the pop before the trucks meet the rail. Hold a stable lock for a beat; an early truck contact while the board is still rising is a collision, not a grind.",
+    catch: "Keep both trucks engaged until the exit point, then lift or drop with the deck level. Re-centre the fingers over the bolts for the landing.",
+    commonFaults: ["Only one truck reaches the rail", "Approach angle is not parallel", "Finger pressure shifts to one end and slips off the obstacle"],
+  },
+  "5-0-grind": {
+    setup: "Approach parallel with the middle finger over the rear truck and the index light near the nose. Plan to carry the rear truck as the only locked contact point.",
+    execution: "Pop to rail height, lock the rear truck and lift the nose into a controlled angle. Keep the tail/rear truck centred on the rail rather than letting the deck flatten into a 50-50.",
+    timing: "Raise the nose as the rear truck makes contact. If the nose angle is added after the lock, the board tends to bounce or slip off.",
+    catch: "Hold the rear-truck lock through the slide, then level the nose and exit cleanly. Bring both pads back over the bolts before landing.",
+    commonFaults: ["Front truck touches down and turns it into a 50-50", "Nose rises too far and the rear truck slips", "Deck levels before the exit and loses the lock"],
+  },
+  boardslide: {
+    setup: "Approach the rail at a controlled angle with fingers centred over the deck. Leave room for a 90° board turn without the hand crossing the obstacle too early.",
+    execution: "Pop above the rail, rotate the deck so its middle sits perpendicular across the rail, then balance pressure across the deck while sliding.",
+    timing: "Complete the 90° turn before the deck contacts the rail. A late turn lands crooked; an early turn can clip the rail on the way up.",
+    catch: "Keep the deck centred across the rail, then unwind or pop out at the end. Catch the board level as it clears the obstacle.",
+    commonFaults: ["Deck remains parallel instead of perpendicular", "Rotation finishes after rail contact", "Fingers move to one end and the board slips off"],
+  },
+  "smith-grind": {
+    setup: "Approach parallel with the rear truck lined up to lock and the index ready to guide the nose. Keep the board's travel line steady.",
+    execution: "Pop into a rear-truck lock while the nose dips down past the rail edge. The front end should be angled away from the coping rather than settling into a flat 50-50.",
+    timing: "Set the rear truck first, then let the nose dip as the lock stabilises. Dipping before contact usually turns the approach into a nose collision.",
+    catch: "Maintain the rear-truck contact through the slide, then lift the nose and guide the deck out. Re-centre both pads over the bolts for touchdown.",
+    commonFaults: ["Rear truck never establishes a stable lock", "Nose dips too early and clips the rail", "Board straightens into a 50-50 during the slide"],
+  },
+  "crooked-grind": {
+    setup: "Approach parallel with the index set toward the nose pocket. Aim the front truck to lock while leaving the deck slightly angled across the ledge.",
+    execution: "Pop onto the front truck with a nose-down crooked pinch. Keep the index pressure over the nose pocket while the rear end trails clear of the edge.",
+    timing: "Complete the small angle and front-truck lock as the board reaches obstacle height. Too much rotation before contact turns it into a boardslide-like lock.",
+    catch: "Hold the front-truck pinch along the ledge, then release by lifting the nose slightly and guiding the deck back level. Catch over the bolts after clearing the edge.",
+    commonFaults: ["Both trucks land flat in a 50-50", "Board rotates too far and becomes a boardslide", "Index pressure misses the nose pocket and the front truck slips off"],
+  },
+};
+
+export const TRICKS: Trick[] = [...BASE_TRICKS, ...ADDITIONAL_TRICKS].map((trick) => {
+  const technique = trick.technique ?? BASE_TECHNIQUE_NOTES[trick.id];
+  if (!technique) throw new Error(`Missing technique notes for ${trick.id}`);
+  return { ...trick, technique };
+});
 
 export const DEFAULT_TRICK: TrickId = "ollie";
 

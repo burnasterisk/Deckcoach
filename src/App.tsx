@@ -6,6 +6,7 @@ import { ControlBar, type CalibrationState } from "@/components/deckcoach/Contro
 import { FingertipOverlay } from "@/components/deckcoach/FingertipOverlay";
 import { GhostDeck } from "@/components/deckcoach/GhostDeck";
 import { HomeScreen } from "@/components/deckcoach/HomeScreen";
+import { SpotMapper } from "@/components/deckcoach/SpotMapper";
 import { SessionBanner } from "@/components/deckcoach/SessionBanner";
 import {
   SessionsDrawer,
@@ -50,9 +51,10 @@ import {
   type WarmupProgress,
 } from "@/lib/sessions";
 import { DEFAULT_SETUP, getDeckSetup, type DeckSetupId } from "@/lib/setup";
-import { loadBoardProfiles, saveBoardProfiles, type BoardProfile } from "@/lib/board-profiles";
+import { getBoardHandlingTuning, getBoardLengthMm, loadBoardProfiles, saveBoardProfiles, type BoardProfile } from "@/lib/board-profiles";
+import { getObstacleAdvice, loadObstacleMaps, saveObstacleMaps, type ObstacleMap } from "@/lib/obstacle-maps";
 import { TrickAnalyzer, type Attempt } from "@/lib/trick-analyzer";
-import { DEFAULT_TRICK, getTrick, type TrickId } from "@/lib/tricks";
+import { DEFAULT_TRICK, getTrick, TRICKS, type TrickId } from "@/lib/tricks";
 
 const LOCK_SAMPLE_COUNT = 10;
 const AUTO_HIDE_IDLE_MS = 4000;
@@ -69,6 +71,8 @@ export function App() {
   const [boardProfiles, setBoardProfiles] = useState<BoardProfile[]>([]);
   const [boardProfilesHydrated, setBoardProfilesHydrated] = useState(false);
   const [activeBoardProfileId, setActiveBoardProfileId] = useState<string | null>(null);
+  const [obstacleMaps, setObstacleMaps] = useState<ObstacleMap[]>([]);
+  const [spotMapperOpen, setSpotMapperOpen] = useState(false);
   const [calibration, setCalibration] = useState<CalibrationState>("idle");
   const [lockedPose, setLockedPose] = useState<{
     landmarks: HandBoardLandmarks;
@@ -110,6 +114,16 @@ export function App() {
   const samplesRef = useRef<HandBoardLandmarks[]>([]);
   const trick = getTrick(trickId);
   const activeBoardProfile = boardProfiles.find((profile) => profile.id === activeBoardProfileId);
+  const activeBoardTuning = useMemo(() => getBoardHandlingTuning(activeBoardProfile), [activeBoardProfile]);
+  const activeObstacle = obstacleMaps[0] ?? null;
+  const spotRecommendations = useMemo(() => {
+    if (!activeObstacle) return [];
+    const advice = getObstacleAdvice(activeObstacle);
+    return advice.suggestedTricks
+      .map((name) => TRICKS.find((candidate) => candidate.name === name))
+      .filter((candidate): candidate is (typeof TRICKS)[number] => Boolean(candidate))
+      .map((candidate) => ({ id: candidate.id, name: candidate.name }));
+  }, [activeObstacle]);
 
   const totdInfo = useMemo(() => getTrickOfTheDay(), []);
   const weeklyChallenge = useMemo(() => getWeeklyChallenge(), []);
@@ -129,6 +143,7 @@ export function App() {
       setActiveBoardProfileId(activeProfile.id);
       setSetup(activeProfile.material);
     }
+    setObstacleMaps(loadObstacleMaps());
   }, []);
 
   useEffect(() => {
@@ -327,6 +342,7 @@ export function App() {
       boardScale,
       boardTelemetryRef.current,
       handKinematicsRef.current,
+      activeBoardTuning,
     );
     const nextPhase = analyzerRef.current.getPhase();
 
@@ -446,7 +462,7 @@ export function App() {
         saveDailyCompletion("totd", totdDateRef.current.dateKey);
       }
     }
-  }, [handTracking.tips, cameraLive, boardLock, mirrored, trickId, trick.name, setup]);
+  }, [handTracking.tips, cameraLive, boardLock, mirrored, trickId, trick.name, setup, activeBoardTuning]);
 
   function handleCreateBoardProfile(profile: BoardProfile) {
     setBoardProfiles((prev) => [profile, ...prev.filter((item) => item.id !== profile.id)]);
@@ -638,9 +654,31 @@ export function App() {
           setClipsOpen(false);
           setSessionsOpen(true);
         }}
+        onOpenSpotMapper={() => {
+          wakeHud();
+          setSpotMapperOpen(true);
+        }}
+        spotLabel={activeObstacle ? `${activeObstacle.name} ${activeObstacle.widthMm}×${activeObstacle.heightMm}mm` : null}
+        spotRecommendations={spotRecommendations}
         hidden={hudHidden}
         onReveal={wakeHud}
         onInteract={bumpInteraction}
+      />
+      <SpotMapper
+        open={spotMapperOpen}
+        videoRef={camera.videoRef}
+        boardLock={boardLock}
+        boardLengthMm={getBoardLengthMm(activeBoardProfile)}
+        mirrored={mirrored}
+        onSave={(map) => {
+          setObstacleMaps((previous) => {
+            const next = [map, ...previous.filter((item) => item.id !== map.id)].slice(0, 12);
+            saveObstacleMaps(next);
+            return next;
+          });
+        }}
+        onClose={() => setSpotMapperOpen(false)}
+        onLockBoard={startLockBoard}
       />
       {attempt &&
         !clipsOpen &&

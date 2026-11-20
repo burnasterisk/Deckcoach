@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { BoardTrackTelemetry } from "@/lib/board-tracker";
+import { deleteClipRecord, loadClipRecords, saveClipRecord, updateStoredClip } from "@/lib/clip-storage";
 import {
   detectMistakeHighlight,
   drawAnnotatedClipFrame,
@@ -61,6 +62,40 @@ function cloneCanvas(src: HTMLCanvasElement): HTMLCanvasElement {
   return copy;
 }
 
+async function imageBlobToCanvas(
+  blob: Blob | null,
+  width: number,
+  height: number,
+): Promise<HTMLCanvasElement> {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context || !blob) return canvas;
+  try {
+    const bitmap = await createImageBitmap(blob);
+    context.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+    return canvas;
+  } catch {
+    const url = URL.createObjectURL(blob);
+    try {
+      const image = new Image();
+      image.src = url;
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error("Stored clip frame could not be decoded"));
+      });
+      context.drawImage(image, 0, 0, width, height);
+    } catch {
+      // Keep a blank frame; the saved video and clip metadata remain usable.
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+    return canvas;
+  }
+}
+
 function drawVideoToCanvas(
   video: HTMLVideoElement,
   width: number,
@@ -115,7 +150,45 @@ export function useClipRecorder(
   const clipSeqRef = useRef(1);
   const mountedRef = useRef(true);
   const clipsRef = useRef<SavedClip[]>([]);
+  const pendingPersistIdsRef = useRef<Set<string>>(new Set());
+  const deletedDuringPersistRef = useRef<Set<string>>(new Set());
   clipsRef.current = clips;
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadClipRecords().then(async (records) => {
+      const restored: SavedClip[] = [];
+      for (const record of records) {
+        const clip = record.clip as SavedClip;
+        const frameCanvases = await Promise.all(
+          record.frameImages.map((blob) => imageBlobToCanvas(blob, clip.width, clip.height)),
+        );
+        if (cancelled) {
+          for (const restoredClip of restored) {
+            if (restoredClip.videoUrl) URL.revokeObjectURL(restoredClip.videoUrl);
+          }
+          return;
+        }
+        if (frameCanvases.length > 0) frameStoreRef.current.set(clip.id, frameCanvases);
+        const restoredClip: SavedClip = {
+          ...clip,
+          ...(!clip.videoBlob && clip.exportState === "encoding" ? { exportState: "fallback" as const } : {}),
+          ...(clip.videoBlob ? { videoUrl: URL.createObjectURL(clip.videoBlob) } : {}),
+        };
+        restored.push(restoredClip);
+      }
+      if (!cancelled && restored.length > 0) {
+        setClips((current) => {
+          const merged = [...current, ...restored];
+          const unique = Array.from(new Map(merged.map((clip) => [clip.id, clip])).values());
+          return unique.sort((a, b) => b.createdAt - a.createdAt).slice(0, MAX_SAVED_CLIPS);
+        });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -129,6 +202,16 @@ export function useClipRecorder(
     };
   }, []);
 
+  useEffect(() => {
+    if (cameraLive) return;
+    // Never splice stale pre-roll or a half-finished attempt into the next session.
+    activeRef.current = null;
+    preRollRef.current = [];
+    preRollWriteIdxRef.current = 0;
+    lastPreRollAtRef.current = 0;
+    setRecordingAir(false);
+  }, [cameraLive]);
+
   const getFrameSource = useCallback(
     (clipId: string, frameIndex: number): HTMLCanvasElement | null => {
       const arr = frameStoreRef.current.get(clipId);
@@ -138,6 +221,28 @@ export function useClipRecorder(
     [],
   );
 
+  const persistClipState = useCallback(async (
+    clip: SavedClip,
+    initialSave: Promise<boolean>,
+    pendingVideoUrl?: string,
+  ) => {
+    await initialSave;
+    // Deleting an item while its frame stills are being encoded can race the
+    // first IndexedDB put. Run a second delete after all pending writes settle.
+    if (deletedDuringPersistRef.current.has(clip.id)) {
+      await deleteClipRecord(clip.id);
+      if (pendingVideoUrl) URL.revokeObjectURL(pendingVideoUrl);
+    } else {
+      await updateStoredClip(clip);
+      if (deletedDuringPersistRef.current.has(clip.id)) {
+        await deleteClipRecord(clip.id);
+        if (pendingVideoUrl) URL.revokeObjectURL(pendingVideoUrl);
+      }
+    }
+    pendingPersistIdsRef.current.delete(clip.id);
+    deletedDuringPersistRef.current.delete(clip.id);
+  }, []);
+
   const finalizeActiveCapture = useCallback((cap: ActiveCapture) => {
     const attempt = cap.completedAttempt;
     if (!attempt || cap.frames.length < 2) {
@@ -146,6 +251,7 @@ export function useClipRecorder(
     }
 
     const clipId = `clip-${Date.now()}-${clipSeqRef.current++}`;
+    pendingPersistIdsRef.current.add(clipId);
     const frames = cap.frames;
     const canvases = cap.canvases;
 
@@ -183,37 +289,43 @@ export function useClipRecorder(
         for (const old of evicted) {
           if (old.videoUrl) URL.revokeObjectURL(old.videoUrl);
           frameStoreRef.current.delete(old.id);
+          if (pendingPersistIdsRef.current.has(old.id)) deletedDuringPersistRef.current.add(old.id);
+          void deleteClipRecord(old.id);
         }
       }
       return next;
     });
     setRecordingAir(false);
+    const saveInitial = saveClipRecord(baseClip, canvases);
 
     // Encode slow-motion annotated video asynchronously without blocking UI or camera tracking.
-    void encodeSlowMoClipVideo(baseClip, getSrc).then((encoded) => {
+    void encodeSlowMoClipVideo(baseClip, getSrc).then(async (encoded) => {
       if (!mountedRef.current) return;
       if (!encoded) {
-        setClips((prev) =>
-          prev.map((c) => (c.id === clipId ? { ...c, exportState: "fallback" } : c)),
-        );
+        const fallbackClip: SavedClip = { ...baseClip, exportState: "fallback" };
+        setClips((prev) => prev.map((c) => (c.id === clipId ? fallbackClip : c)));
+        await persistClipState(fallbackClip, saveInitial);
         return;
       }
       const videoUrl = URL.createObjectURL(encoded.blob);
-      setClips((prev) =>
-        prev.map((c) =>
-          c.id === clipId
-            ? {
-                ...c,
-                videoBlob: encoded.blob,
-                videoUrl,
-                videoMimeType: encoded.mimeType,
-                exportState: "ready",
-              }
-            : c,
-        ),
-      );
+      const readyClip: SavedClip = {
+        ...baseClip,
+        videoBlob: encoded.blob,
+        videoUrl,
+        videoMimeType: encoded.mimeType,
+        exportState: "ready",
+      };
+      setClips((prev) => prev.map((c) => (c.id === clipId ? readyClip : c)));
+      await persistClipState(readyClip, saveInitial, videoUrl);
+    }).catch(async () => {
+      // MediaRecorder/canvas encoding can fail on unsupported mobile browsers or
+      // when the page loses resources. Keep the annotated frame replay either way.
+      if (!mountedRef.current) return;
+      const fallbackClip: SavedClip = { ...baseClip, exportState: "fallback" };
+      setClips((prev) => prev.map((clip) => (clip.id === clipId ? fallbackClip : clip)));
+      await persistClipState(fallbackClip, saveInitial);
     });
-  }, []);
+  }, [persistClipState]);
 
   const syncSample = useCallback(
     (input: ClipSampleInput) => {
@@ -408,6 +520,8 @@ export function useClipRecorder(
   }, [cameraLive, finalizeActiveCapture]);
 
   const deleteClip = useCallback((clipId: string) => {
+    if (pendingPersistIdsRef.current.has(clipId)) deletedDuringPersistRef.current.add(clipId);
+    void deleteClipRecord(clipId);
     setClips((prev) => {
       const target = prev.find((c) => c.id === clipId);
       if (target?.videoUrl) URL.revokeObjectURL(target.videoUrl);

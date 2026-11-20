@@ -67,6 +67,57 @@ function formatHistoryTimestamp(ts: number): string {
   return `${dayStr} · ${timeStr}`;
 }
 
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+async function shareOrDownloadChallengePack(entry: ChallengeSubmission, clip: SavedClip | null, challenge: ReturnType<typeof getWeeklyChallenge>) {
+  const safeTrick = entry.trickName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const baseName = `deckcoach-${entry.weekKey}-${safeTrick}`;
+  const metadata = {
+    app: "DeckCoach",
+    entryType: "local practice entry export",
+    status: "NOT SUBMITTED — attach/share this pack with the challenge organiser yourself",
+    challengeWeek: entry.weekKey,
+    challengeDates: challenge.dateRangeLabel,
+    requiredTrick: challenge.trick.name,
+    minimumScore: challenge.minScore,
+    trick: entry.trickName,
+    score: entry.score,
+    handle: entry.handle,
+    setup: entry.setupLabel,
+    recordedAt: new Date(entry.submittedAt).toISOString(),
+    clipFilename: clip?.videoBlob ? `${baseName}.${clip.videoMimeType?.includes("mp4") ? "mp4" : "webm"}` : null,
+    note: "DeckCoach is a static, server-free app. This file and its companion clip do not get uploaded or grant premium access automatically.",
+  };
+  const metadataFile = new File([JSON.stringify(metadata, null, 2)], `${baseName}.json`, { type: "application/json" });
+  const mediaFile = clip?.videoBlob
+    ? new File([clip.videoBlob], `${baseName}.${clip.videoMimeType?.includes("mp4") ? "mp4" : "webm"}`, { type: clip.videoMimeType ?? "video/webm" })
+    : null;
+  const files = mediaFile ? [metadataFile, mediaFile] : [metadataFile];
+
+  if (navigator.share && navigator.canShare?.({ files })) {
+    try {
+      await navigator.share({
+        title: `DeckCoach · ${entry.trickName}`,
+        text: `Practice entry · ${entry.score} points · ${entry.handle}`,
+        files,
+      });
+      return;
+    } catch (error) {
+      // Respect an explicit share-sheet cancellation; otherwise keep a download fallback.
+      if (error instanceof DOMException && error.name === "AbortError") return;
+    }
+  }
+  downloadBlob(metadataFile, metadataFile.name);
+  if (mediaFile) downloadBlob(mediaFile, mediaFile.name);
+}
+
 export function SessionsDrawer({
   open,
   initialTab = "presets",
@@ -706,8 +757,20 @@ export function SessionsDrawer({
                   <p className="mt-2 border-l-2 border-hazard/70 pl-2 font-mono text-[10px] leading-relaxed text-paper/70">
                     Saved on this device only. This server-free build does not upload entries or
                     send emails, so this is not an official submission and cannot award Pro access.
-                    Share or export your clip from the Clips drawer.
+                    Use the export below to package the entry receipt and its saved clip when it is still available.
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => void shareOrDownloadChallengePack(
+                      existingSubmission,
+                      clips.find((clip) => clip.id === existingSubmission.clipId) ?? null,
+                      challenge,
+                    )}
+                    className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 border border-primary/40 bg-primary/10 px-3 font-mono text-xs font-bold text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    <Play className="size-3.5" />
+                    EXPORT ENTRY + CLIP FILES
+                  </button>
                   {qualifyingClips.length > 0 && (
                     <button
                       type="button"

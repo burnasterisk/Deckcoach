@@ -639,37 +639,46 @@ export async function encodeSlowMoClipVideo(
     recorder.onerror = () => resolve(null);
   });
 
-  // Render first frame before starting recorder so stream starts cleanly
-  drawAnnotatedClipFrame(ctx, canvas.width, canvas.height, clip, 0, getFrameSource(0), {
-    showHudBadge: true,
-    animPhase: 0,
-  });
-
-  recorder.start();
-
-  const waitMs = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-  const stepMs = 82; // ~3x slow motion vs 30fps
-
-  for (let i = 0; i < clip.frames.length; i++) {
-    const isMistakeHold = i === clip.mistake.frameIndex && clip.mistake.severity === "mistake";
-    const subSteps = isMistakeHold ? 7 : 1;
-    for (let s = 0; s < subSteps; s++) {
-      drawAnnotatedClipFrame(ctx, canvas.width, canvas.height, clip, i, getFrameSource(i), {
-        showHudBadge: true,
-        animPhase: i * 0.12 + s * 0.15,
-      });
-      await waitMs(stepMs);
-    }
-  }
-
+  let recorderStarted = false;
   try {
-    recorder.stop();
-  } catch {
-    return null;
-  }
-  stream.getTracks().forEach((t) => t.stop());
+    // Render first frame before starting recorder so stream starts cleanly.
+    drawAnnotatedClipFrame(ctx, canvas.width, canvas.height, clip, 0, getFrameSource(0), {
+      showHudBadge: true,
+      animPhase: 0,
+    });
 
-  return done;
+    recorder.start();
+    recorderStarted = true;
+
+    const waitMs = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+    const stepMs = 82; // ~3x slow motion vs 30fps
+
+    for (let i = 0; i < clip.frames.length; i++) {
+      const isMistakeHold = i === clip.mistake.frameIndex && clip.mistake.severity === "mistake";
+      const subSteps = isMistakeHold ? 7 : 1;
+      for (let s = 0; s < subSteps; s++) {
+        drawAnnotatedClipFrame(ctx, canvas.width, canvas.height, clip, i, getFrameSource(i), {
+          showHudBadge: true,
+          animPhase: i * 0.12 + s * 0.15,
+        });
+        await waitMs(stepMs);
+      }
+    }
+
+    if (recorder.state !== "inactive") recorder.stop();
+    return await done;
+  } catch {
+    if (recorderStarted && recorder.state !== "inactive") {
+      try {
+        recorder.stop();
+      } catch {
+        // The recorder may already have stopped itself after an encoder error.
+      }
+    }
+    return null;
+  } finally {
+    stream.getTracks().forEach((track) => track.stop());
+  }
 }
 
 /**

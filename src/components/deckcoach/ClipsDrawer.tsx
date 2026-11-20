@@ -284,6 +284,7 @@ export function ClipsDrawer({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-4 py-3">
+          <p className="mb-3 font-mono text-[9px] tracking-[.12em] text-paper/35">ON THIS DEVICE · LAST 10 CLIPS · EXPORT TO KEEP A COPY</p>
           {!activeClip ? (
             <div className="flex h-full min-h-[260px] flex-col items-center justify-center text-center px-4">
               <div className="grid size-12 place-items-center rounded-lg border border-paper/15 bg-black/45 text-primary">

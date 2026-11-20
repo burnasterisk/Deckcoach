@@ -7,6 +7,7 @@ import {
   Loader2,
   Lock,
   RotateCcw,
+  Scan,
   SlidersHorizontal,
   X,
 } from "lucide-react";
@@ -41,6 +42,9 @@ interface ControlBarProps {
   onOpenClips: () => void;
   sessionActive: boolean;
   onOpenSessions: () => void;
+  onOpenSpotMapper: () => void;
+  spotLabel: string | null;
+  spotRecommendations: { id: TrickId; name: string }[];
   hidden: boolean;
   onReveal: () => void;
   onInteract: () => void;
@@ -66,6 +70,9 @@ export function ControlBar({
   onOpenClips,
   sessionActive,
   onOpenSessions,
+  onOpenSpotMapper,
+  spotLabel,
+  spotRecommendations,
   hidden,
   onReveal,
   onInteract,
@@ -104,6 +111,22 @@ export function ControlBar({
       >
         <div className="min-w-0 lg:flex-1">
           <TrickSelector value={trick} onChange={onTrickChange} hudHidden={hidden} />
+          {spotRecommendations.length > 0 && (
+            <div className="mt-1 flex min-w-0 items-center gap-1.5 overflow-x-auto no-scrollbar px-0.5 pb-0.5">
+              <span className="shrink-0 font-mono text-[8px] font-bold tracking-[.16em] text-uv/80">SPOT / TRY</span>
+              {spotRecommendations.slice(0, 3).map((recommendation) => (
+                <button
+                  key={recommendation.id}
+                  type="button"
+                  onClick={() => onTrickChange(recommendation.id)}
+                  aria-label={`Select ${recommendation.name}, suggested for this obstacle`}
+                  className="min-h-7 shrink-0 border border-uv/20 bg-uv/8 px-2 font-mono text-[9px] text-paper/75 transition-colors hover:border-uv/60 hover:bg-uv/15 hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-uv"
+                >
+                  {recommendation.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="my-1 h-px bg-paper/10 lg:my-0 lg:h-6 lg:w-px" aria-hidden="true" />
@@ -142,6 +165,21 @@ export function ControlBar({
               <span>{calibration === "locked" ? "Relock Board" : "Lock Board"}</span>
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={onOpenSpotMapper}
+            title={spotLabel ? `Map another obstacle. Current spot: ${spotLabel}` : "Measure a rail, ledge, gap or ramp against your locked board"}
+            className={cn(
+              "flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-1.5 font-mono text-xs whitespace-nowrap transition-colors cursor-pointer press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+              spotLabel
+                ? "border-uv/50 bg-uv/15 text-paper hover:border-uv"
+                : "border-paper/15 bg-black/35 text-paper/75 hover:border-paper/30 hover:text-paper",
+            )}
+          >
+            <Scan className="size-3.5 text-uv" />
+            <span>{spotLabel ? "Spot ✓" : "Map Spot"}</span>
+          </button>
 
           <button
             type="button"

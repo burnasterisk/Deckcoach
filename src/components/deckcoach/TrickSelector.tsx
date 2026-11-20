@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   getTrick,
   getTricksByCategory,
+  TRICKS,
   TRICK_CATEGORIES,
   type TrickCategory,
   type TrickId,
@@ -21,6 +22,7 @@ export function TrickSelector({ value, onChange, hudHidden = false }: TrickSelec
   const activeTrick = getTrick(value);
   const [open, setOpen] = useState(false);
   const [browseCategory, setBrowseCategory] = useState<TrickCategory>(activeTrick.category);
+  const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -49,7 +51,12 @@ export function TrickSelector({ value, onChange, hudHidden = false }: TrickSelec
     };
   }, [open]);
 
-  const categoryTricks = getTricksByCategory(browseCategory);
+  const query = search.trim().toLowerCase();
+  const categoryTricks = query
+    ? TRICKS.filter((trick) =>
+        `${trick.name} ${trick.short} ${trick.category}`.toLowerCase().includes(query),
+      )
+    : getTricksByCategory(browseCategory);
 
   return (
     <div ref={containerRef} className="relative min-w-0">
@@ -58,7 +65,7 @@ export function TrickSelector({ value, onChange, hudHidden = false }: TrickSelec
         <div
           role="dialog"
           aria-label="Choose fingerboard trick"
-          className="hud-glass absolute bottom-full left-0 z-40 mb-2.5 w-[min(92vw,34rem)] animate-slap rounded-xl p-3 text-paper"
+          className="hud-glass absolute bottom-full left-0 z-40 mb-2.5 max-h-[78dvh] w-[min(92vw,34rem)] animate-slap overflow-y-auto rounded-xl p-3 text-paper"
         >
           <div className="flex items-center justify-between gap-2 border-b border-paper/10 pb-2">
             <div
@@ -74,7 +81,7 @@ export function TrickSelector({ value, onChange, hudHidden = false }: TrickSelec
                     type="button"
                     role="tab"
                     aria-selected={isSelected}
-                    onClick={() => setBrowseCategory(cat.id)}
+                    onClick={() => { setBrowseCategory(cat.id); setSearch(""); }}
                     className={cn(
                       "min-h-[36px] shrink-0 rounded-md px-2.5 py-1 font-mono text-[11px] whitespace-nowrap transition-colors cursor-pointer press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                       isSelected
@@ -88,9 +95,11 @@ export function TrickSelector({ value, onChange, hudHidden = false }: TrickSelec
               })}
             </div>
 
+            <span className="shrink-0 pl-1 font-mono text-[9px] text-paper/35">{TRICKS.length} TRICKS</span>
+
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={() => { setOpen(false); setSearch(""); }}
               aria-label="Close trick list"
               className="grid size-9 shrink-0 place-items-center rounded-md text-paper/60 transition-colors cursor-pointer hover:bg-paper/10 hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
@@ -98,9 +107,31 @@ export function TrickSelector({ value, onChange, hudHidden = false }: TrickSelec
             </button>
           </div>
 
+          <label className="mt-2.5 flex h-10 items-center gap-2 border border-paper/12 bg-black/40 px-3 focus-within:border-primary/55">
+            <span className="font-mono text-[9px] text-paper/35">FIND</span>
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search the trick library…"
+              aria-label="Search fingerboard tricks"
+              className="min-w-0 flex-1 bg-transparent font-mono text-[11px] text-paper outline-none placeholder:text-paper/30"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Clear trick search"
+                className="grid size-6 place-items-center text-paper/45 hover:text-paper"
+              >
+                <X className="size-3" />
+              </button>
+            )}
+          </label>
+
           <div
             role="radiogroup"
-            aria-label={`${TRICK_CATEGORIES.find((c) => c.id === browseCategory)?.label ?? ""} tricks`}
+            aria-label={query ? "Matching fingerboard tricks" : `${TRICK_CATEGORIES.find((c) => c.id === browseCategory)?.label ?? ""} tricks`}
             className="mt-2.5 grid max-h-[42dvh] grid-cols-2 gap-1.5 overflow-y-auto pr-0.5 sm:grid-cols-3"
           >
             {categoryTricks.map((t) => {
@@ -114,6 +145,7 @@ export function TrickSelector({ value, onChange, hudHidden = false }: TrickSelec
                   onClick={() => {
                     onChange(t.id);
                     setOpen(false);
+                    setSearch("");
                   }}
                   className={cn(
                     "flex min-h-[44px] flex-col items-start justify-center rounded-lg border px-2.5 py-1.5 text-left transition-colors cursor-pointer press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
@@ -132,6 +164,7 @@ export function TrickSelector({ value, onChange, hudHidden = false }: TrickSelec
                   </span>
                   <span className="mt-0.5 flex items-center gap-1.5 font-mono text-[9px] tabular-nums text-paper/50">
                     <span>{t.short}</span>
+                    {query && <><span aria-hidden="true">·</span><span className="uppercase">{t.category}</span></>}
                     <span aria-hidden="true">·</span>
                     <span className="text-hazard">
                       {"■".repeat(t.difficulty)}
@@ -141,7 +174,37 @@ export function TrickSelector({ value, onChange, hudHidden = false }: TrickSelec
                 </button>
               );
             })}
+            {categoryTricks.length === 0 && (
+              <p className="col-span-full py-7 text-center font-mono text-[11px] text-paper/40">
+                NO MATCHES. Try another trick name.
+              </p>
+            )}
           </div>
+
+          {activeTrick.technique && (
+            <section className="mt-3 border-t border-paper/12 pt-3" aria-label={`${activeTrick.name} technique notes`}>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="font-mono text-[9px] font-bold tracking-[.2em] text-primary">TECHNIQUE NOTES</p>
+                <p className="font-mono text-[9px] text-paper/40">{activeTrick.difficulty}/5 · {activeTrick.category.toUpperCase()}</p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {([
+                  ["SETUP", activeTrick.technique.setup],
+                  ["EXECUTION", activeTrick.technique.execution],
+                  ["TIMING", activeTrick.technique.timing],
+                  ["CATCH / EXIT", activeTrick.technique.catch],
+                ] as const).map(([label, detail]) => (
+                  <div key={label} className="border-l border-uv/55 bg-black/25 py-1 pl-2 pr-1">
+                    <p className="font-mono text-[9px] font-bold tracking-wider text-paper/45">{label}</p>
+                    <p className="mt-0.5 text-[10px] leading-relaxed text-paper/78">{detail}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 font-mono text-[9px] leading-relaxed text-hazard/85">
+                WATCH FOR: {activeTrick.technique.commonFaults.join(" · ")}
+              </p>
+            </section>
+          )}
         </div>
       )}
 
@@ -151,7 +214,7 @@ export function TrickSelector({ value, onChange, hudHidden = false }: TrickSelec
           type="button"
           aria-expanded={open}
           aria-label={`Selected trick: ${activeTrick.name}. Change trick`}
-          onClick={() => setOpen((prev) => !prev)}
+          onClick={() => { if (!open) setSearch(""); setOpen((prev) => !prev); }}
           className={cn(
             "flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-1.5 font-mono text-xs whitespace-nowrap transition-colors cursor-pointer press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
             open

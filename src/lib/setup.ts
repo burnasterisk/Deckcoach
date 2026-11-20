@@ -62,3 +62,12 @@ export const DEFAULT_SETUP: DeckSetupId = "plastic";
 export function getDeckSetup(id: DeckSetupId): DeckSetupProfile {
   return DECK_SETUPS[id];
 }
+
+
+/** Small qualitative adjustments for an individual fingerboard profile. These are
+ * coaching heuristics, not calibrated physical measurements. */
+export interface BoardHandlingTuning {
+  popThresholdMultiplier: number;
+  landingBandMultiplier: number;
+  idealSpreadMultiplier: number;
+}

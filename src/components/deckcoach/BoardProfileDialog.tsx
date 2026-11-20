@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Check, ChevronRight, ImagePlus, Plus, Trash2, X } from "lucide-react";
 
-import type { BoardProfile, BoardGrip, BoardShape, BoardWidth } from "@/lib/board-profiles";
+import type { BoardProfile, BoardGrip, BoardShape, BoardWidth, BoardWeightFeel, BoardConcave, BoardLength } from "@/lib/board-profiles";
 import { getBoardProfileLabel, getBoardWidthLabel } from "@/lib/board-profiles";
 import type { DeckSetupId } from "@/lib/setup";
 import { cn } from "@/lib/utils";
@@ -131,6 +131,9 @@ export function BoardProfileDialog({
   const [grip, setGrip] = useState<BoardGrip>(defaultMaterial === "wood" ? "foam" : "sandpaper");
   const [width, setWidth] = useState<BoardWidth>("standard");
   const [shape, setShape] = useState<BoardShape>("popsicle");
+  const [weightFeel, setWeightFeel] = useState<BoardWeightFeel>("balanced");
+  const [concave, setConcave] = useState<BoardConcave>("medium");
+  const [deckLength, setDeckLength] = useState<BoardLength>("standard");
   const [photoDataUrl, setPhotoDataUrl] = useState<string | undefined>();
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [processingPhoto, setProcessingPhoto] = useState(false);
@@ -165,6 +168,9 @@ export function BoardProfileDialog({
       grip,
       width,
       shape,
+      weightFeel,
+      concave,
+      deckLength,
       ...(photoDataUrl ? { photoDataUrl } : {}),
       createdAt: now,
       updatedAt: now,
@@ -224,12 +230,16 @@ export function BoardProfileDialog({
                   <span className="block truncate font-display text-lg text-paper">{profile.name}</span>
                   <span className="mt-0.5 block text-[10px] font-mono text-paper/60">{getBoardProfileLabel(profile)}</span>
                   <span className="mt-1 block text-[10px] text-paper/40">{getBoardWidthLabel(profile.width)} · {profile.shape.replace("-", " ")}</span>
+                  <span className="mt-0.5 block text-[9px] text-paper/35">{profile.weightFeel ?? "balanced"} feel · {profile.concave ?? "medium"} concave · {profile.deckLength ?? "standard"} length</span>
                 </button>
                 <div className="flex shrink-0 flex-col items-center gap-1">
                   {profile.id === activeProfileId && <Check className="size-4 text-primary" />}
                   <button
                     type="button"
-                    onClick={() => onDelete(profile.id)}
+                    onClick={() => {
+                      onDelete(profile.id);
+                      if (profiles.length <= 1) setCreating(true);
+                    }}
                     aria-label={`Delete ${profile.name}`}
                     className="grid size-8 place-items-center text-paper/30 hover:text-primary"
                   >
@@ -313,8 +323,35 @@ export function BoardProfileDialog({
                 </label>
               </div>
 
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <label>
+                  <span className="mb-1.5 block text-[10px] font-bold tracking-[.14em] text-paper/55">WEIGHT FEEL</span>
+                  <select value={weightFeel} onChange={(event) => setWeightFeel(event.target.value as BoardWeightFeel)} className="h-10 w-full border border-paper/15 bg-[#151019] px-2 text-xs text-paper outline-none focus:border-primary/70">
+                    <option value="light">Light / poppy</option>
+                    <option value="balanced">Balanced</option>
+                    <option value="heavy">Heavy / planted</option>
+                  </select>
+                </label>
+                <label>
+                  <span className="mb-1.5 block text-[10px] font-bold tracking-[.14em] text-paper/55">CONCAVE</span>
+                  <select value={concave} onChange={(event) => setConcave(event.target.value as BoardConcave)} className="h-10 w-full border border-paper/15 bg-[#151019] px-2 text-xs text-paper outline-none focus:border-primary/70">
+                    <option value="low">Low / mellow</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High / steep</option>
+                  </select>
+                </label>
+                <label>
+                  <span className="mb-1.5 block text-[10px] font-bold tracking-[.14em] text-paper/55">DECK LENGTH</span>
+                  <select value={deckLength} onChange={(event) => setDeckLength(event.target.value as BoardLength)} className="h-10 w-full border border-paper/15 bg-[#151019] px-2 text-xs text-paper outline-none focus:border-primary/70">
+                    <option value="short">Short · ~94 mm</option>
+                    <option value="standard">Standard · ~98 mm</option>
+                    <option value="long">Long · ~102 mm</option>
+                  </select>
+                </label>
+              </div>
+
               <p className="text-[10px] leading-relaxed text-paper/40">
-                Width is a rough setup category, not a measurement. The trainer currently adjusts its physics profile by deck material; grip, width and shape are saved as reference details.
+                You can choose by feel; no ruler or scale is needed. Material, weight feel, concave and width provide small starting-point sensitivity adjustments. These are heuristics, not manufacturer-verified specifications or a full rigid-body physics simulation.
               </p>
             </div>
 
@@ -335,7 +372,18 @@ export function BoardProfileDialog({
                 )}
                 {processingPhoto && <span className="absolute inset-0 grid place-items-center bg-black/70 text-[10px] text-paper">PROCESSING…</span>}
               </button>
-              <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => void handlePhoto(event.target.files?.[0])} />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                capture="environment"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0];
+                  event.currentTarget.value = "";
+                  void handlePhoto(file);
+                }}
+              />
               {photoDataUrl && (
                 <button type="button" onClick={() => setPhotoDataUrl(undefined)} className="flex items-center justify-center gap-1 text-[10px] text-paper/45 hover:text-primary">
                   <X className="size-3" /> REMOVE PHOTO
